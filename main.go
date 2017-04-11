@@ -70,7 +70,6 @@ func main() {
 			profile = config.DefaultProfile
 		}
 		fileName = usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
-		fmt.Println("Profile: " + profile)
 	case "switch":
 		switchCommand.Parse(os.Args[2:])
 		if *profilePtr != "" {
@@ -83,14 +82,12 @@ func main() {
 		}
 		fileName = usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
 		roleFileName = usr.HomeDir + "/.aws/portray-role-session-" + *roleAccountNumberPtr + "_" + *roleNamePtr + ".json"
-		fmt.Println("Profile: " + profile)
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	if authCommand.Parsed() {
-		fmt.Println("In Auth")
 		awsCreds := getCredsFromFile(fileName)
 		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 			if *tokenCodePtr != "" {
@@ -100,7 +97,6 @@ func main() {
 				fmt.Print("Enter token: ")
 				token, _ := reader.ReadString('\n')
 				token = strings.TrimSpace(token)
-				fmt.Printf("Token: %v", token)
 				awsCreds = getNewSession(config.AccountNumber, config.UserName, token)
 			} else {
 				fmt.Println("You need a valid session!")
@@ -108,7 +104,6 @@ func main() {
 			}
 			writeSessionFile(awsCreds, fileName)
 		}
-		fmt.Printf("AWS CREDS: %+v", awsCreds)
 		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 			fmt.Println("You need a valid session!")
 			os.Exit(1)
@@ -132,7 +127,6 @@ func main() {
 		}
 		startShell(accountNumber)
 	} else if switchCommand.Parsed() {
-		fmt.Println("In Switch")
 		profileIdx := -1
 
 		if *profilePtr != "" {
@@ -145,13 +139,11 @@ func main() {
 				}
 			}
 		}
-		fmt.Printf("RoleFileName: %v", roleFileName)
 
 		awsRoleCreds := getCredsFromFile(roleFileName)
 		if awsRoleCreds.SessionToken == "" || !validateSession(awsRoleCreds) {
 			fileName = usr.HomeDir + "/.aws/portray-session-" + envProfile + ".json"
 			awsCreds := getCredsFromFile(fileName)
-			fmt.Println(awsCreds.SessionToken)
 			if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 				if config.AccountNumber != "" {
 					fmt.Printf("Attempt auth using config...")
@@ -184,8 +176,6 @@ func main() {
 
 		roleAccountNumber := awsRoleCreds.AccountNumber
 		roleName := awsRoleCreds.RoleName
-
-		fmt.Printf("Account #: %v", roleAccountNumber)
 
 		sessionToEnvVars(awsRoleCreds, roleAccountNumber, roleName, profile)
 		if *saveProfilePtr == true {
@@ -228,7 +218,6 @@ type PortrayConfig struct {
 func getNewSession(accountNumber string, userName string, tokenCode string) (awsCreds AwsCreds) {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
 	checkError(err)
-	fmt.Println("got AWS Session")
 	svc := sts.New(sess)
 
 	params := &sts.GetSessionTokenInput{
@@ -255,7 +244,6 @@ func getNewSession(accountNumber string, userName string, tokenCode string) (aws
 func getNewRoleSession(accountNumber string, roleName string, usr user.User) (awsCreds AwsCreds) {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
 	checkError(err)
-	fmt.Println("got AWS Session")
 	svc := sts.New(sess)
 
 	timestamp := int64(time.Now().Unix())
@@ -288,7 +276,6 @@ func writeSessionFile(awsCreds AwsCreds, fileName string) {
 	createFile(fileName)
 	err := ioutil.WriteFile(fileName, awsCredsJson, 0600)
 	checkError(err)
-	fmt.Println("Wrote session file")
 }
 
 func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile string) {
@@ -322,13 +309,11 @@ func createFile(path string) {
 }
 
 func validateSession(awsCreds AwsCreds) (valid bool) {
-	fmt.Println("Checking valid session")
 	valid = false
 	timestamp := int64(time.Now().Unix())
 	if timestamp < awsCreds.Expiration {
 		valid = true
 	}
-	fmt.Printf("Valid: %t", valid)
 	return
 }
 
@@ -344,12 +329,10 @@ func getPortrayConfigFromFile(fileName string) (config PortrayConfig) {
 
 func writePortrayConfigToFile(fileName string, config PortrayConfig) {
 	configJson, _ := json.Marshal(config)
-	fmt.Println(configJson)
 
 	createFile(fileName)
 	err := ioutil.WriteFile(fileName, configJson, 0600)
 	checkError(err)
-	fmt.Println("Wrote config file")
 }
 
 func getCredsFromFile(fileName string) (awsCreds AwsCreds) {
