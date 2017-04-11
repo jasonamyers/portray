@@ -1,20 +1,19 @@
 package main
 
 import (
-	"flag"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"fmt"
-	"os"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"io/ioutil"
+	"os"
 	"os/user"
+	"strconv"
 	"syscall"
 	"time"
-	"strconv"
 )
-
 
 func main() {
 	// Subcommands
@@ -45,7 +44,7 @@ func main() {
 	// Get our session file
 	usr, err := user.Current()
 	checkError(err)
-	fileName := usr.HomeDir + "/.aws/portray-session-"+profile +".json"
+	fileName := usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
 	roleFileName := ""
 	// Switch on the subcommand
 	// Parse the flags for appropriate FlagSet
@@ -56,7 +55,7 @@ func main() {
 		authCommand.Parse(os.Args[2:])
 	case "switch":
 		switchCommand.Parse(os.Args[2:])
-		roleFileName = usr.HomeDir + "/.aws/portray-role-session-" + *roleAccountNumberPtr + "_" + *roleNamePtr +".json"
+		roleFileName = usr.HomeDir + "/.aws/portray-role-session-" + *roleAccountNumberPtr + "_" + *roleNamePtr + ".json"
 	default:
 		flag.PrintDefaults()
 		os.Exit(1)
@@ -65,12 +64,12 @@ func main() {
 	if authCommand.Parsed() {
 		fmt.Println("In Auth")
 		awsCreds := getCredsFromFile(fileName)
-		if awsCreds.SessionToken == "" || !validateSession(awsCreds){
+		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 			awsCreds = getNewSession(*accountNumberPtr, *userNamePtr, *tokenCodePtr)
 			writeSessionFile(awsCreds, fileName)
 		}
 		fmt.Printf("AWS CREDS: %+v", awsCreds)
-		if awsCreds.SessionToken == "" || !validateSession(awsCreds){
+		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 			fmt.Println("You need a valid session!")
 			os.Exit(1)
 		}
@@ -79,9 +78,9 @@ func main() {
 	} else if switchCommand.Parsed() {
 		fmt.Println("In Switch")
 		awsRoleCreds := getCredsFromFile(roleFileName)
-		if awsRoleCreds.SessionToken == "" || !validateSession(awsRoleCreds){
+		if awsRoleCreds.SessionToken == "" || !validateSession(awsRoleCreds) {
 			awsCreds := getCredsFromFile(fileName)
-			if awsCreds.SessionToken == "" || !validateSession(awsCreds){
+			if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 				fmt.Println("You need a valid session!")
 				os.Exit(1)
 			}
@@ -94,13 +93,13 @@ func main() {
 }
 
 type AwsCreds struct {
-	AccessKeyId string
-	Expiration int64
+	AccessKeyId     string
+	Expiration      int64
 	SecretAccessKey string
-	SessionToken string
+	SessionToken    string
 }
 
-func getNewSession(accountNumber string, userName string, tokenCode string) (awsCreds AwsCreds){
+func getNewSession(accountNumber string, userName string, tokenCode string) (awsCreds AwsCreds) {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
 	checkError(err)
 	fmt.Println("got AWS Session")
@@ -116,12 +115,16 @@ func getNewSession(accountNumber string, userName string, tokenCode string) (aws
 
 	checkError(err)
 
-	awsCreds = AwsCreds{ *resp.Credentials.AccessKeyId, resp.Credentials.Expiration.Unix(), *resp.Credentials.SecretAccessKey, *resp.Credentials.SessionToken}
+	awsCreds = AwsCreds{*resp.Credentials.AccessKeyId,
+		resp.Credentials.Expiration.Unix(),
+		*resp.Credentials.SecretAccessKey,
+		*resp.Credentials.SessionToken,
+	}
 
 	return
 }
 
-func getNewRoleSession(accountNumber string, roleName string, usr user.User) (awsCreds AwsCreds){
+func getNewRoleSession(accountNumber string, roleName string, usr user.User) (awsCreds AwsCreds) {
 	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
 	checkError(err)
 	fmt.Println("got AWS Session")
@@ -130,9 +133,9 @@ func getNewRoleSession(accountNumber string, roleName string, usr user.User) (aw
 	timestamp := int64(time.Now().Unix())
 
 	params := &sts.AssumeRoleInput{
-		ExternalId: 	 aws.String(usr.Username),
+		ExternalId:      aws.String(usr.Username),
 		DurationSeconds: aws.Int64(3600),
-		RoleArn: aws.String("arn:aws:iam::" + accountNumber + ":role/" + roleName),
+		RoleArn:         aws.String("arn:aws:iam::" + accountNumber + ":role/" + roleName),
 		RoleSessionName: aws.String(roleName + "-" + usr.Username + "-" + strconv.FormatInt(timestamp, 10)),
 	}
 
@@ -140,7 +143,11 @@ func getNewRoleSession(accountNumber string, roleName string, usr user.User) (aw
 
 	checkError(err)
 
-	awsCreds = AwsCreds{ *resp.Credentials.AccessKeyId, resp.Credentials.Expiration.Unix(), *resp.Credentials.SecretAccessKey, *resp.Credentials.SessionToken}
+	awsCreds = AwsCreds{*resp.Credentials.AccessKeyId,
+		resp.Credentials.Expiration.Unix(),
+		*resp.Credentials.SecretAccessKey,
+		*resp.Credentials.SessionToken,
+	}
 
 	return
 }
@@ -159,7 +166,7 @@ func sessionToEnvVars(awsCreds AwsCreds, account string, role string) {
 	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyId)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
 	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)
-	os.Setenv("PORTRAY_PROMPT", account + ":" + role)
+	os.Setenv("PORTRAY_PROMPT", account+":"+role)
 
 }
 
@@ -182,11 +189,11 @@ func validateSession(awsCreds AwsCreds) (valid bool) {
 	if timestamp < awsCreds.Expiration {
 		valid = true
 	}
-	fmt.Printf("Valid: %t", valid )
+	fmt.Printf("Valid: %t", valid)
 	return
 }
 
-func getCredsFromFile (fileName string) (awsCreds AwsCreds) {
+func getCredsFromFile(fileName string) (awsCreds AwsCreds) {
 	file, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return
