@@ -84,4 +84,10 @@ You can see an example here.
 Portray updates a $PORTRAY_PROMPT environment variable with an account number, role name, and profile so
 you can include that in your prompt to have that information available in your prompt.
 
+For example after an auth:
 
+``123456789012:ctl [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
+
+After a switch
+
+``234567890123:Admin:dev [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
