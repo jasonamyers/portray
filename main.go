@@ -15,17 +15,21 @@ import (
 	"time"
 )
 
+
+
 func main() {
 	// Subcommands
 	authCommand := flag.NewFlagSet("auth", flag.ExitOnError)
 	switchCommand := flag.NewFlagSet("switch", flag.ExitOnError)
 
 	// Auth Options
+	profilePtr := authCommand.String("profile", "", "The amazon credentials profile")
 	accountNumberPtr := authCommand.String("account", "", "The amazon account of your MFA device")
 	userNamePtr := authCommand.String("username", "", "The amazon username associated with your MFA device")
 	tokenCodePtr := authCommand.String("token", "", "The OTP token to use")
 
 	// Switch Options
+	profilePtr = switchCommand.String("profile", "", "The amazon credentials profile")
 	roleAccountNumberPtr := switchCommand.String("account", "", "The amazon account of your role")
 	roleNamePtr := switchCommand.String("role", "", "The amazon role name associated to assume")
 
@@ -36,16 +40,16 @@ func main() {
 		fmt.Println("auth, switch or clear subcommand is required")
 		os.Exit(1)
 	}
-	profile := os.Getenv("AWS_PROFILE")
-	if len(profile) == 0 {
-		profile = "default"
-	}
+
+	profile := "default"
+	envProfile := os.Getenv("AWS_PROFILE")
+	fileName := ""
+	roleFileName := ""
 
 	// Get our session file
 	usr, err := user.Current()
 	checkError(err)
-	fileName := usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
-	roleFileName := ""
+
 	// Switch on the subcommand
 	// Parse the flags for appropriate FlagSet
 	// FlagSet.Parse() requires a set of arguments to parse as input
@@ -53,8 +57,22 @@ func main() {
 	switch os.Args[1] {
 	case "auth":
 		authCommand.Parse(os.Args[2:])
+		if *profilePtr != "" {
+			profile = *profilePtr
+			os.Setenv("AWS_PROFILE", profile)
+		} else if envProfile != ""{
+			profile = envProfile
+		}
+		fileName = usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
 	case "switch":
 		switchCommand.Parse(os.Args[2:])
+		if *profilePtr != "" {
+			profile = *profilePtr
+			os.Setenv("AWS_PROFILE", profile)
+		} else if envProfile != ""{
+			profile = envProfile
+		}
+		fileName = usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
 		roleFileName = usr.HomeDir + "/.aws/portray-role-session-" + *roleAccountNumberPtr + "_" + *roleNamePtr + ".json"
 	default:
 		flag.PrintDefaults()
