@@ -90,14 +90,12 @@ func main() {
 	}
 
 	if authCommand.Parsed() {
-		accountNumber := *accountNumberPtr
 		fmt.Println("In Auth")
 		awsCreds := getCredsFromFile(fileName)
 		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
 			if *tokenCodePtr != "" {
 				awsCreds = getNewSession(*accountNumberPtr, *userNamePtr, *tokenCodePtr)
 			} else if config.AccountNumber != "" {
-				accountNumber = config.AccountNumber
 				reader := bufio.NewReader(os.Stdin)
 				fmt.Print("Enter token: ")
 				token, _ := reader.ReadString('\n')
@@ -115,7 +113,9 @@ func main() {
 			fmt.Println("You need a valid session!")
 			os.Exit(1)
 		}
-		fmt.Printf("Account #: %v", accountNumber)
+
+		accountNumber := awsCreds.AccountNumber
+
 		sessionToEnvVars(awsCreds, accountNumber, "", profile)
 		if *savePtr == true {
 			if *profilePtr != "" {
@@ -132,8 +132,6 @@ func main() {
 		}
 		startShell(accountNumber)
 	} else if switchCommand.Parsed() {
-		roleAccountNumber := *roleAccountNumberPtr
-		roleName := *roleNamePtr
 		fmt.Println("In Switch")
 		profileIdx := -1
 
@@ -142,10 +140,13 @@ func main() {
 				if config.Profiles[i].Name == *profilePtr {
 					profileIdx = i
 					fmt.Println("Found Profile")
+					roleFileName = usr.HomeDir + "/.aws/portray-role-session-" + config.Profiles[i].AccountNumber + "_" + config.Profiles[i].RoleName + ".json"
 					break
 				}
 			}
 		}
+		fmt.Printf("RoleFileName: %v", roleFileName)
+
 		awsRoleCreds := getCredsFromFile(roleFileName)
 		if awsRoleCreds.SessionToken == "" || !validateSession(awsRoleCreds) {
 			fileName = usr.HomeDir + "/.aws/portray-session-" + envProfile + ".json"
@@ -172,8 +173,6 @@ func main() {
 			if *roleAccountNumberPtr != "" {
 				awsRoleCreds = getNewRoleSession(*roleAccountNumberPtr, *roleNamePtr, *usr)
 			} else {
-				roleAccountNumber = config.Profiles[profileIdx].AccountNumber
-				roleName = config.Profiles[profileIdx].RoleName
 				awsRoleCreds = getNewRoleSession(
 					config.Profiles[profileIdx].AccountNumber,
 					config.Profiles[profileIdx].RoleName,
@@ -182,6 +181,10 @@ func main() {
 			}
 			writeSessionFile(awsRoleCreds, roleFileName)
 		}
+
+		roleAccountNumber := awsRoleCreds.AccountNumber
+		roleName := awsRoleCreds.RoleName
+
 		fmt.Printf("Account #: %v", roleAccountNumber)
 
 		sessionToEnvVars(awsRoleCreds, roleAccountNumber, roleName, profile)
