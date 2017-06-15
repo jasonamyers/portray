@@ -19,7 +19,7 @@ The command below is an example of how to start a session:
 ``portray auth --account <aws_account_number> --username <aws_user_name> --token <otp_token_code>``
 
 You can optionally specify an AWS profile to use in your AWS Credentials file by adding
-``--profile <aws_creds_profile_name>`` onto the command above.  You can also save all the
+``--profile <aws_creds_profile_name>`` onto the command above(currently broken).  You can also save all the
 supplied details as the defaults for the auth command by appending ``--save`` onto the
 command.  This will store the account, username, and profile so you don't have to specify
 them each time. More details on that are available in the [Config](#config) section
