@@ -15,4 +15,4 @@ fabric.properties
 *.test
 *.out
 .glide/
-portray
+portray-*
