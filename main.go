@@ -193,8 +193,9 @@ func main() {
 	}
 }
 
+// AwsCreds represents a set of AWS credentials
 type AwsCreds struct {
-	AccessKeyId     string
+	AccessKeyID     string
 	Expiration      int64
 	SecretAccessKey string
 	SessionToken    string
@@ -202,12 +203,14 @@ type AwsCreds struct {
 	RoleName        string
 }
 
+// PortrayProfile represents a valid AWS assumable Role
 type PortrayProfile struct {
 	Name          string
 	AccountNumber string
 	RoleName      string
 }
 
+// PortrayConfig represents an AWS Account with MFA
 type PortrayConfig struct {
 	DefaultProfile string
 	AccountNumber  string
@@ -271,10 +274,10 @@ func getNewRoleSession(accountNumber string, roleName string, usr user.User) (aw
 }
 
 func writeSessionFile(awsCreds AwsCreds, fileName string) {
-	awsCredsJson, _ := json.Marshal(awsCreds)
+	awsCredsJSON, _ := json.Marshal(awsCreds)
 
 	createFile(fileName)
-	err := ioutil.WriteFile(fileName, awsCredsJson, 0600)
+	err := ioutil.WriteFile(fileName, awsCredsJSON, 0600)
 	checkError(err)
 }
 
@@ -289,7 +292,7 @@ func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile st
 
 	fmt.Println("Setting ENV VARS")
 	os.Setenv("AWS_PROFILE", profile)
-	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyId)
+	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyID)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
 	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)
 	os.Setenv("PORTRAY_PROMPT", prompt)
@@ -328,10 +331,10 @@ func getPortrayConfigFromFile(fileName string) (config PortrayConfig) {
 }
 
 func writePortrayConfigToFile(fileName string, config PortrayConfig) {
-	configJson, _ := json.Marshal(config)
+	configJSON, _ := json.Marshal(config)
 
 	createFile(fileName)
-	err := ioutil.WriteFile(fileName, configJson, 0600)
+	err := ioutil.WriteFile(fileName, configJSON, 0600)
 	checkError(err)
 }
 
