@@ -25,8 +25,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var accountNumber string
-var userName string
 var role string
 var profileName string
 
@@ -44,9 +42,9 @@ var switchCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(switchCmd)
 
-	authCmd.Flags().StringVarP(&accountNumber, "account", "a", "", "the AWS account number")
-	authCmd.Flags().StringVarP(&role, "role", "r", "", "the AWS role to assume")
-	authCmd.Flags().StringVarP(&profileName, "profile", "p", "", "the name to save these details under")
-	authCmd.Flags().StringVarP(&userName, "username", "u", "", "the AWS user name")
+	switchCmd.Flags().StringVarP(&accountNumber, "account", "a", "", "the AWS account number")
+	switchCmd.Flags().StringVarP(&role, "role", "r", "", "the AWS role to assume")
+	switchCmd.Flags().StringVarP(&profileName, "profile", "p", "", "the name to save these details under")
+	switchCmd.Flags().StringVarP(&userName, "username", "u", "", "the AWS user name")
 	switchCmd.Flags().BoolP("save", "s", false, "save the account details")
 }
