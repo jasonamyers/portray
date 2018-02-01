@@ -44,7 +44,7 @@ func main() {
 	}
 
 	profile := "default"
-	envProfile := os.Getenv("AWS_PROFILE")
+	envProfile := os.Getenv("PORTRAY_PROFILE")
 	fileName := ""
 	roleFileName := ""
 
@@ -189,7 +189,13 @@ func main() {
 			}
 			writePortrayConfigToFile(portrayConfigFileName, config)
 		}
-		startShell(roleAccountNumber + "-" + *roleNamePtr)
+		sessionName := ""
+		if *roleNamePtr == "" {
+			sessionName := roleAccountNumber + "-" + roleName
+		} else {
+			sessionName := roleAccountNumber + "-" + *roleNamePtr
+		}
+		startShell(sessionName)
 	}
 }
 
