@@ -11,7 +11,7 @@ help:
 build:
 	go get github.com/aws/aws-sdk-go
 	@echo "Building portray for your current environment"
-	go build main.go -o portray
+	go build -o portray main.go
 
 build_multi:
 	go get github.com/aws/aws-sdk-go
