@@ -191,9 +191,9 @@ func main() {
 		}
 		sessionName := ""
 		if *roleNamePtr == "" {
-			sessionName := roleAccountNumber + "-" + roleName
+			sessionName = roleAccountNumber + "-" + roleName
 		} else {
-			sessionName := roleAccountNumber + "-" + *roleNamePtr
+			sessionName = roleAccountNumber + "-" + *roleNamePtr
 		}
 		startShell(sessionName)
 	}
