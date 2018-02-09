@@ -44,7 +44,7 @@ func main() {
 	}
 
 	profile := "default"
-	envProfile := os.Getenv("AWS_PROFILE")
+	envProfile := os.Getenv("PORTRAY_PROFILE")
 	fileName := ""
 	roleFileName := ""
 
@@ -63,7 +63,7 @@ func main() {
 		authCommand.Parse(os.Args[2:])
 		if *profilePtr != "" {
 			profile = *profilePtr
-			os.Setenv("AWS_PROFILE", profile)
+			os.Setenv("PORTRAY_PROFILE", profile)
 		} else if envProfile != "" {
 			profile = envProfile
 		} else if config.DefaultProfile != "" {
@@ -74,7 +74,7 @@ func main() {
 		switchCommand.Parse(os.Args[2:])
 		if *profilePtr != "" {
 			profile = *profilePtr
-			os.Setenv("AWS_PROFILE", profile)
+			os.Setenv("PORTRAY_PROFILE", profile)
 		} else if envProfile != "" {
 			profile = envProfile
 		} else if config.DefaultProfile != "" {
@@ -189,7 +189,13 @@ func main() {
 			}
 			writePortrayConfigToFile(portrayConfigFileName, config)
 		}
-		startShell(roleAccountNumber + "-" + *roleNamePtr)
+		sessionName := ""
+		if *roleNamePtr == "" {
+			sessionName := roleAccountNumber + "-" + roleName
+		} else {
+			sessionName := roleAccountNumber + "-" + *roleNamePtr
+		}
+		startShell(sessionName)
 	}
 }
 
@@ -291,7 +297,7 @@ func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile st
 	}
 
 	fmt.Println("Setting ENV VARS")
-	os.Setenv("AWS_PROFILE", profile)
+	os.Setenv("PORTRAY_PROFILE", profile)
 	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyID)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
 	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)

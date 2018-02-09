@@ -16,3 +16,4 @@ fabric.properties
 *.out
 .glide/
 portray-*
+portray
