@@ -24,7 +24,8 @@ exec_in_tmux_pane:
 execloop:
 	@echo "Starting file watcher"
 	@fswatch --exclude='.*\.git' \
-    --exclude='test\.yaml' \
+    --exclude='.*\.yaml' \
+    --exclude='.*\.json' \
 	--exclude='.*\.swp' \
 	--exclude='.*\debug.*?' \
 	--exclude='.*4913' \
@@ -37,6 +38,8 @@ execloop:
 debugloop:
 	@echo "Starting file watcher"
 	@fswatch --exclude='.*\.git' \
+    --exclude='.*\.yaml' \
+    --exclude='.*\.json' \
 	--exclude='.*\.swp' \
 	--exclude='.*\debug.*?' \
 	--exclude='.*4913' \

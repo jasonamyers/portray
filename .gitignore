@@ -1,0 +1,4 @@
+*.sw[p|o]
+*.yaml
+*.json
+portray
