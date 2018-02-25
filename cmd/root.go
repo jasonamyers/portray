@@ -33,12 +33,9 @@ var cfgFile string
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "portray",
-	Short: "An AWS role management tool",
-	Long: `Portray allows you to assume roles that require MFA in multiple
-	accounts.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Short: "An AWS session and role management tool",
+	Long: `Portray helps manage STS sessions in multiple accounts by
+isolating temporary credentials into subshells.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -54,7 +51,6 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.portray.yaml)")
-
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -71,7 +67,9 @@ func initConfig() {
 		}
 
 		// Search config in home directory with name ".portray" (without extension).
+		viper.AddConfigPath("/etc/portray/")
 		viper.AddConfigPath(home)
+		viper.AddConfigPath(".")
 		viper.SetConfigName(".portray")
 	}
 
@@ -79,6 +77,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		//fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
 }
