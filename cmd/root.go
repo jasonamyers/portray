@@ -34,7 +34,7 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "portray",
 	Short: "An AWS session and role management tool",
-	Long:  `Portray helps manage STS sessions in multiple accounts by
+	Long: `Portray helps manage STS sessions in multiple accounts by
 isolating temporary credentials into subshells.`,
 }
 

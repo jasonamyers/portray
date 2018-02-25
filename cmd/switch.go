@@ -32,7 +32,7 @@ var profileName string
 var switchCmd = &cobra.Command{
 	Use:   "switch",
 	Short: "assumes an AWS role",
-	Long:  `The switch command allows you to assume a role via a named profile
+	Long: `The switch command allows you to assume a role via a named profile
 or by passing in the account and role details directly.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("switch called")
