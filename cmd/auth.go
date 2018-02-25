@@ -141,6 +141,7 @@ func init() {
 	authCmd.Flags().StringVarP(&tokenCode, "token", "t", "", "an MFA token")
 	authCmd.Flags().StringVarP(&profile, "profile", "p", "", "a name for your profile")
 	authCmd.Flags().BoolP("no-mfa", "n", false, "disable MFA")
+
 	viper.BindPFlag("noMfa", authCmd.Flags().Lookup("no-mfa"))
 }
 

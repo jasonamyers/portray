@@ -33,6 +33,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+var sync bool
+var outFile string
+var format string
+
 type PortrayConfig struct {
 	AuthProfiles map[string]AwsAuthProfile `json:auth_profiles`
 	Profiles     map[string]AwsRoleProfile `json:profiles`
@@ -66,7 +70,7 @@ as well as sync it with the AWS CLI config`,
 		check(err)
 
 		if viper.GetBool("sync") {
-			fmt.Println("Attempting to parse ~/.aws/config")
+			//fmt.Println("Attempting to parse ~/.aws/config")
 			parseAwsConfig()
 		} else {
 			fmt.Println("Bare config command not yet implemented. Try --sync")
@@ -78,7 +82,12 @@ func init() {
 	RootCmd.AddCommand(configCmd)
 
 	configCmd.Flags().BoolP("sync", "s", false, "sync Portray config with AWS CLI")
+	configCmd.Flags().StringVarP(&outFile, "out-file", "o", "", "The file to save the config to")
+	configCmd.Flags().StringVarP(&format, "format", "f", "yaml", "The output format for the config")
+
 	viper.BindPFlag("sync", configCmd.Flags().Lookup("sync"))
+	viper.BindPFlag("outFile", configCmd.Flags().Lookup("out-file"))
+	viper.BindPFlag("format", configCmd.Flags().Lookup("format"))
 }
 
 func parseAwsConfig() {
@@ -95,7 +104,7 @@ func parseAwsConfig() {
 
 	// ini parsing has a DEFAULT section that's empty. Let's not count it.
 	numProfiles := len(cfg.SectionStrings()) - 1
-	fmt.Printf("Found %d profiles in AWS config\n", numProfiles)
+	//fmt.Printf("Found %d profiles in AWS config\n", numProfiles)
 
 	portrayConfig := PortrayConfig{}
 	awsAuthProfiles := map[string]AwsAuthProfile{}
@@ -112,7 +121,7 @@ func parseAwsConfig() {
 			continue
 		} else if sectionHeader == "default" {
 			// Found default profile
-			fmt.Printf("Found default profile %s\n", sectionHeader)
+			//fmt.Printf("Found default profile %s\n", sectionHeader)
 		}
 
 		sectionHash := cfg.Section(sectionHeader).KeysHash()
@@ -173,7 +182,7 @@ func parseAwsConfig() {
 		}
 
 		if numReferences > 0 {
-			fmt.Printf("Found %d source references to the %s profile\n", numReferences, profileName)
+			//fmt.Printf("Found %d source references to the %s profile\n", numReferences, profileName)
 		}
 	}
 
@@ -188,13 +197,20 @@ func parseAwsConfig() {
 	check(err)
 
 	// dump yaml to file
-	err = ioutil.WriteFile("test.yaml", yamlData, 0644)
-	check(err)
-	// dump json to file
-	err = ioutil.WriteFile("test.json", jsonData, 0644)
-	check(err)
-
-	fmt.Printf("New configration written to both %s and %s\n", "test.yaml", "test.json")
+	if outFile != "" {
+		err = ioutil.WriteFile(outFile, yamlData, 0644)
+		check(err)
+		fmt.Printf("New configration written to %s\n", outFile)
+	} else {
+        if format == "yaml" {
+            fmt.Println(string(yamlData))
+        } else if format == "json" {
+            fmt.Println(string(jsonData))
+        } else {
+            fmt.Printf("Unknown output format %s! Valid values are yaml and json\n", format)
+            os.Exit(1)
+        }
+    }
 }
 
 func check(e error) {
