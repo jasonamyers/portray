@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/user"
 	"strings"
 	"syscall"
 	"time"
@@ -33,15 +32,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var accountId  string
-var userName   string
-var tokenCode  string
-var profile    string
-var noMfa      bool
+var accountId string
+var userName string
+var tokenCode string
+var profile string
+var noMfa bool
 
 // authCmd represents the auth command
 var authCmd = &cobra.Command{
@@ -50,47 +50,86 @@ var authCmd = &cobra.Command{
 	Long:  `The auth command helps you authenticate via MFA.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		err := viper.ReadInConfig() // Find and read the config file
-		if accountId == "" && err != nil {
-			fmt.Println("No config file available and no account details supplied")
-			os.Exit(1)
-		}
-		if accountId != "" {
-			viper.Set("AccountId", accountId)
-		}
-		if userName != "" {
-			viper.Set("UserName", userName)
-		}
-		usr, err := user.Current()
 		checkError(err)
-		fileName := usr.HomeDir + "/.aws/portray-session-" + profile + ".json"
-		awsCreds := getCredsFromFile(fileName)
-		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
-			if tokenCode != "" {
-				awsCreds = getNewSession(accountId, userName, tokenCode)
-			} else if viper.GetString("AccountId") != "" {
-				reader := bufio.NewReader(os.Stdin)
-				fmt.Print("Enter token: ")
-				token, _ := reader.ReadString('\n')
-				token = strings.TrimSpace(token)
-				awsCreds = getNewSession(
-					viper.GetString("AccountId"),
-					viper.GetString("UserName"),
-					token)
+
+		// If the user doesn't pass in a specific account, try to find it from
+		// the default auth profile.
+		if accountId == "" {
+			defaultAccountId := viper.GetString("AuthProfiles.default.AccountId")
+			if defaultAccountId != "" {
+				viper.Set("AccountId", defaultAccountId)
 			} else {
-				fmt.Println("You need a valid session!")
+				fmt.Println("Couldn't find default profile and no account details specified!")
 				os.Exit(1)
 			}
+		} else {
+			viper.Set("UserName", userName)
+		}
+
+		// If the user doesn't pass in a specific username, try to find it from
+		// the default auth profile.
+		if userName == "" {
+			defaultUserName := viper.GetString("AuthProfiles.default.UserName")
+			if defaultUserName != "" {
+				viper.Set("UserName", defaultUserName)
+			} else {
+				fmt.Println("Couldn't find default username!")
+				os.Exit(1)
+			}
+		} else {
+			viper.Set("UserName", userName)
+		}
+
+		// If the user doesn't pass in a specific profile, try to find it from
+		// the default auth profile.
+		if profile == "" {
+			defaultProfile := viper.GetString("AuthProfiles.default.Name")
+			if defaultProfile != "" {
+				viper.Set("Profile", defaultProfile)
+			} else {
+				// Default to zee default
+				fmt.Println("Couldn't find default auth profile via config and none specified. Trying \"default\"")
+				viper.Set("Profile", "default")
+			}
+		} else {
+			viper.Set("Profile", profile)
+		}
+
+		home, err := homedir.Dir()
+		checkError(err)
+		fileName := home + "/.aws/portray-session-" + viper.GetString("Profile") + ".json"
+		awsCreds := getCredsFromFile(fileName)
+
+		// If there's no valid session cache, generate a new session. Prompt
+		// for MFA token if it's not passed, unless the --no-mfa flag is set.
+		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
+			if tokenCode == "" {
+				if viper.GetBool("noMfa") {
+					fmt.Println("Skipping MFA token prompting")
+				} else {
+					// Prompt for MFA token
+					reader := bufio.NewReader(os.Stdin)
+					fmt.Print("Enter token: ")
+					token, _ := reader.ReadString('\n')
+					tokenCode = strings.TrimSpace(token)
+				}
+			}
+
+			awsCreds = getNewSession(
+				viper.GetString("AccountId"),
+				viper.GetString("UserName"),
+				tokenCode)
+
 			//writeSessionFile(awsCreds, fileName)
 		}
-		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
-			fmt.Println("You need a valid session!")
-			os.Exit(1)
-		}
 
-		accountId := awsCreds.AccountId
+		sessionToEnvVars(
+			awsCreds,
+			viper.GetString("AccountId"),
+			"",
+			viper.GetString("Profile"))
 
-		sessionToEnvVars(awsCreds, accountId, "", profile)
-		startShell(accountId)
+		startShell(viper.GetString("AccountId"))
 	},
 }
 
@@ -100,9 +139,9 @@ func init() {
 	authCmd.Flags().StringVarP(&accountId, "account", "a", "", "the AWS account number")
 	authCmd.Flags().StringVarP(&userName, "username", "u", "", "the AWS user name")
 	authCmd.Flags().StringVarP(&tokenCode, "token", "t", "", "an MFA token")
-	authCmd.Flags().StringVarP(&profile, "profile", "p", "default", "a name for your profile")
+	authCmd.Flags().StringVarP(&profile, "profile", "p", "", "a name for your profile")
 	authCmd.Flags().BoolP("no-mfa", "n", false, "disable MFA")
-    viper.BindPFlag("noMfa", configCmd.Flags().Lookup("no-mfa"))
+	viper.BindPFlag("noMfa", authCmd.Flags().Lookup("no-mfa"))
 }
 
 func checkError(err error) {
@@ -145,18 +184,25 @@ func getNewSession(accountId string, userName string, tokenCode string) (awsCred
 	checkError(err)
 	svc := sts.New(sess)
 
-	params := &sts.GetSessionTokenInput{
-		DurationSeconds: aws.Int64(43200),
-		SerialNumber:    aws.String("arn:aws:iam::" + accountId + ":mfa/" + userName),
-		TokenCode:       aws.String(tokenCode),
+	// If no tokenCode is passed, assume MFA has been disabled by a flag
+	var params *sts.GetSessionTokenInput
+	if tokenCode == "" {
+		params = &sts.GetSessionTokenInput{
+			DurationSeconds: aws.Int64(43200),
+		}
+	} else {
+		params = &sts.GetSessionTokenInput{
+			DurationSeconds: aws.Int64(43200),
+			SerialNumber:    aws.String("arn:aws:iam::" + accountId + ":mfa/" + userName),
+			TokenCode:       aws.String(tokenCode),
+		}
 	}
 
 	resp, err := svc.GetSessionToken(params)
-
 	checkError(err)
 
 	awsCreds = AwsCreds{
-        *resp.Credentials.AccessKeyId,
+		*resp.Credentials.AccessKeyId,
 		*resp.Credentials.SecretAccessKey,
 		*resp.Credentials.SessionToken,
 		resp.Credentials.Expiration.Unix(),
