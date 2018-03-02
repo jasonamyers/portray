@@ -1,0 +1,7 @@
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "~v1.13.8"
+
+[prune]
+  go-tests = true
+  unused-packages = true
