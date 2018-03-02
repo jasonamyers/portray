@@ -91,3 +91,8 @@ For example after an auth:
 After a switch
 
 ``234567890123:Admin:dev [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
+
+## Developing
+
+`dep` is used for package management. Use `dep ensure` to keep Gopkg.lock and
+vendored packages in sync.
