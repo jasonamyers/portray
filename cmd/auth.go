@@ -21,17 +21,12 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/jasonamyers/portray/util"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -49,62 +44,109 @@ var authCmd = &cobra.Command{
 	Short: "establishes an MFA session via STS",
 	Long:  `The auth command helps you authenticate via MFA.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := viper.ReadInConfig() // Find and read the config file
-		checkError(err)
+		noMfa = viper.GetBool("NoMfa")
 
-		// If the user doesn't pass in a specific account, try to find it from
-		// the default auth profile.
-		if accountId == "" {
-			defaultAccountId := viper.GetString("AuthProfiles.default.AccountId")
-			if defaultAccountId != "" {
-				viper.Set("AccountId", defaultAccountId)
+		// User specified profile
+		if profile != "" {
+			// validate it against Portray config
+			if viper.IsSet("AuthProfiles." + profile) {
+				profileKey := "AuthProfiles." + profile + "."
+				fmt.Printf("Found profile %s in config\n", profile)
+
+				// get account id from profile
+				if accountId == "" {
+					if !viper.IsSet(profileKey + "AccountId") {
+						fmt.Printf("Error! Unable to find AccountId for the %s profile. Is it configured in the AuthProfiles section?\n", profile)
+						os.Exit(1)
+					}
+					accountId = viper.GetString(profileKey + "AccountId")
+					viper.Set("AccountId", accountId)
+				} else {
+					fmt.Println("Error! Can't specify alternate account for a configured profile")
+					os.Exit(1)
+				}
+
+				// get user name from profile
+				if userName == "" {
+					if !viper.IsSet(profileKey + "UserName") {
+						fmt.Printf("Error! Unable to find UserName for the %s profile. Is it configured in the AuthProfiles section?\n", profile)
+						os.Exit(1)
+					}
+					userName = viper.GetString(profileKey + "UserName")
+					viper.Set("UserName", userName)
+				} else {
+					fmt.Println("Error! Can't specify alternate username for a configured profile")
+					os.Exit(1)
+				}
+
+				// passed validations, tell dah user
+				fmt.Printf("Using %s profile with AccountId %s and UserName %s\n",
+					profile,
+					accountId,
+					userName)
+
 			} else {
-				fmt.Println("Couldn't find default profile and no account details specified!")
+				fmt.Printf("Invalid profile %s! Is it configured in the AuthProfiles section?\n", profile)
 				os.Exit(1)
 			}
+			// user has not specified a profile
 		} else {
-			viper.Set("UserName", userName)
-		}
+			// user has not specified account
+			// try to find default from config
+			if accountId == "" {
+				defaultAccountId := viper.GetString("AuthProfiles.default.AccountId")
+				defaultUserName := viper.GetString("AuthProfiles.default.UserName")
+				defaultProfileName := viper.GetString("AuthProfiles.default.Name")
 
-		// If the user doesn't pass in a specific username, try to find it from
-		// the default auth profile.
-		if userName == "" {
-			defaultUserName := viper.GetString("AuthProfiles.default.UserName")
-			if defaultUserName != "" {
-				viper.Set("UserName", defaultUserName)
-			} else {
-				fmt.Println("Couldn't find default username!")
-				os.Exit(1)
-			}
-		} else {
-			viper.Set("UserName", userName)
-		}
+				// populate account id
+				if defaultAccountId != "" {
+					accountId = defaultAccountId
+					viper.Set("AccountId", defaultAccountId)
+				} else {
+					fmt.Println("Error! Unable to find AccoundId for the default profile. Is it configured in the AuthProfiles section?")
+				}
 
-		// If the user doesn't pass in a specific profile, try to find it from
-		// the default auth profile.
-		if profile == "" {
-			defaultProfile := viper.GetString("AuthProfiles.default.Name")
-			if defaultProfile != "" {
-				viper.Set("Profile", defaultProfile)
+				// populate user name
+				if defaultUserName != "" {
+					userName = defaultUserName
+					viper.Set("UserName", defaultUserName)
+				} else {
+					fmt.Println("Error! Unable to find UserName for the default profile. Is it configured in the AuthProfiles section?")
+				}
+
+				// populate profile name
+				if defaultProfileName != "" {
+					profile = defaultProfileName
+					viper.Set("Profile", defaultProfileName)
+				} else {
+					fmt.Println("Default profile name not specified in config. Using default AWS profile \"default\"")
+					profile = "default"
+					viper.Set("Profile", profile)
+				}
+
+				fmt.Printf("Using default profile %s with AccountId %s and UserName %s\n", profile, accountId, userName)
 			} else {
-				// Default to zee default
-				fmt.Println("Couldn't find default auth profile via config and none specified. Trying \"default\"")
-				viper.Set("Profile", "default")
+				// if user has specified account, they have to specify username
+				// as well.
+				if userName == "" {
+					fmt.Println("Error! Must specify --username/-u if manually setting AccountId via --account/-a")
+					os.Exit(1)
+				} else {
+					viper.Set("UserName", userName)
+				}
 			}
-		} else {
-			viper.Set("Profile", profile)
 		}
 
 		home, err := homedir.Dir()
-		checkError(err)
-		fileName := home + "/.aws/portray-session-" + viper.GetString("Profile") + ".json"
-		awsCreds := getCredsFromFile(fileName)
+		util.CheckError(err)
+		fileName := home + "/.aws/portray-session-" + profile + ".json"
+		awsCreds := util.GetCredsFromFile(fileName)
 
 		// If there's no valid session cache, generate a new session. Prompt
 		// for MFA token if it's not passed, unless the --no-mfa flag is set.
-		if awsCreds.SessionToken == "" || !validateSession(awsCreds) {
+		if awsCreds.SessionToken == "" || !util.ValidateSession(awsCreds) {
 			if tokenCode == "" {
-				if viper.GetBool("noMfa") {
+				if noMfa {
 					fmt.Println("Skipping MFA token prompting")
 				} else {
 					// Prompt for MFA token
@@ -115,12 +157,8 @@ var authCmd = &cobra.Command{
 				}
 			}
 
-			awsCreds = getNewSession(
-				viper.GetString("AccountId"),
-				viper.GetString("UserName"),
-				tokenCode)
-
-			writeSessionFile(awsCreds, fileName)
+			awsCreds = util.GetNewSession(profile, accountId, userName, tokenCode)
+			util.WriteSessionFile(awsCreds, fileName)
 		} else {
 			// Found a cached sessions that's still valid
 			fmt.Println("Using cached session credentials")
@@ -130,16 +168,11 @@ var authCmd = &cobra.Command{
 			currentTime := time.Now()
 			sessionTimeLeft := sessionExpiration.Sub(currentTime)
 
-			fmt.Printf("Session valid for %+v\n", Round(sessionTimeLeft, time.Second))
+			fmt.Printf("Session valid for %+v\n", util.Round(sessionTimeLeft, time.Second))
 		}
 
-		sessionToEnvVars(
-			awsCreds,
-			viper.GetString("AccountId"),
-			"",
-			viper.GetString("Profile"))
-
-		startShell(viper.GetString("AccountId"))
+		util.SessionToEnvVars(awsCreds, accountId, "", profile)
+		util.StartShell(accountId)
 	},
 }
 
@@ -152,134 +185,8 @@ func init() {
 	authCmd.Flags().StringVarP(&profile, "profile", "p", "", "a name for your profile")
 	authCmd.Flags().BoolP("no-mfa", "n", false, "disable MFA")
 
-	viper.BindPFlag("noMfa", authCmd.Flags().Lookup("no-mfa"))
-}
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-}
-
-func getCredsFromFile(fileName string) (awsCreds AwsCreds) {
-	file, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return
-	}
-
-	json.Unmarshal(file, &awsCreds)
-	return
-}
-
-func validateSession(awsCreds AwsCreds) (valid bool) {
-	valid = false
-	timestamp := int64(time.Now().Unix())
-	if timestamp < awsCreds.Expiration {
-		valid = true
-	}
-	return
-}
-
-// AwsCreds represents a set of AWS credentials
-type AwsCreds struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	SessionToken    string
-	Expiration      int64
-	AccountId       string
-}
-
-func getNewSession(accountId string, userName string, tokenCode string) (awsCreds AwsCreds) {
-	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
-	checkError(err)
-	svc := sts.New(sess)
-
-	// If no tokenCode is passed, assume MFA has been disabled by a flag
-	var params *sts.GetSessionTokenInput
-	if tokenCode == "" {
-		params = &sts.GetSessionTokenInput{
-			DurationSeconds: aws.Int64(43200),
-		}
-	} else {
-		params = &sts.GetSessionTokenInput{
-			DurationSeconds: aws.Int64(43200),
-			SerialNumber:    aws.String("arn:aws:iam::" + accountId + ":mfa/" + userName),
-			TokenCode:       aws.String(tokenCode),
-		}
-	}
-
-	resp, err := svc.GetSessionToken(params)
-	checkError(err)
-
-	awsCreds = AwsCreds{
-		*resp.Credentials.AccessKeyId,
-		*resp.Credentials.SecretAccessKey,
-		*resp.Credentials.SessionToken,
-		resp.Credentials.Expiration.Unix(),
-		accountId,
-	}
-
-	return
-}
-
-func writeSessionFile(awsCreds AwsCreds, fileName string) {
-	awsCredsJSON, _ := json.Marshal(awsCreds)
-
-	createFile(fileName)
-	err := ioutil.WriteFile(fileName, awsCredsJSON, 0600)
-	checkError(err)
-}
-
-func createFile(path string) {
-	// detect if file exists
-	var _, err = os.Stat(path)
-
-	// create file if not exists
-	if os.IsNotExist(err) {
-		var file, err = os.Create(path)
-		checkError(err)
-		defer file.Close()
-	}
-}
-
-func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile string) {
-	prompt := account
-	if role != "" {
-		prompt = prompt + ":" + role
-	}
-	if profile != "" {
-		prompt = prompt + ":" + profile
-	}
-
-	fmt.Println("Setting ENV VARS")
-	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyID)
-	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
-	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)
-	os.Setenv("PORTRAY_PROMPT", prompt)
-
-}
-
-func startShell(account string) {
-	fmt.Println("Starting shell with Session in: " + account)
-	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
-}
-
-func Round(d, r time.Duration) time.Duration {
-	if r <= 0 {
-		return d
-	}
-	neg := d < 0
-	if neg {
-		d = -d
-	}
-	if m := d % r; m+m < r {
-		d = d - m
-	} else {
-		d = d + r - m
-	}
-	if neg {
-		return -d
-	}
-	return d
+	viper.BindPFlag("AccountId", authCmd.Flags().Lookup("account"))
+	viper.BindPFlag("UserName", authCmd.Flags().Lookup("username"))
+	viper.BindPFlag("Profile", authCmd.Flags().Lookup("profile"))
+	viper.BindPFlag("NoMfa", authCmd.Flags().Lookup("no-mfa"))
 }
