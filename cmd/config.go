@@ -200,15 +200,15 @@ func parseAwsConfig() {
 		check(err)
 		fmt.Printf("New configration written to %s\n", outFile)
 	} else {
-        if format == "yaml" {
-            fmt.Println(string(yamlData))
-        } else if format == "json" {
-            fmt.Println(string(jsonData))
-        } else {
-            fmt.Printf("Unknown output format %s! Valid values are yaml and json\n", format)
-            os.Exit(1)
-        }
-    }
+		if format == "yaml" {
+			fmt.Println(string(yamlData))
+		} else if format == "json" {
+			fmt.Println(string(jsonData))
+		} else {
+			fmt.Printf("Unknown output format %s! Valid values are yaml and json\n", format)
+			os.Exit(1)
+		}
+	}
 }
 
 func check(e error) {

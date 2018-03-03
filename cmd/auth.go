@@ -120,7 +120,17 @@ var authCmd = &cobra.Command{
 				viper.GetString("UserName"),
 				tokenCode)
 
-			//writeSessionFile(awsCreds, fileName)
+			writeSessionFile(awsCreds, fileName)
+		} else {
+			// Found a cached sessions that's still valid
+			fmt.Println("Using cached session credentials")
+
+			// Check how much time is left on the session so we can tell the user
+			sessionExpiration := time.Unix(awsCreds.Expiration, 0)
+			currentTime := time.Now()
+			sessionTimeLeft := sessionExpiration.Sub(currentTime)
+
+			fmt.Printf("Session valid for %+v\n", Round(sessionTimeLeft, time.Second))
 		}
 
 		sessionToEnvVars(
@@ -213,6 +223,26 @@ func getNewSession(accountId string, userName string, tokenCode string) (awsCred
 	return
 }
 
+func writeSessionFile(awsCreds AwsCreds, fileName string) {
+	awsCredsJSON, _ := json.Marshal(awsCreds)
+
+	createFile(fileName)
+	err := ioutil.WriteFile(fileName, awsCredsJSON, 0600)
+	checkError(err)
+}
+
+func createFile(path string) {
+	// detect if file exists
+	var _, err = os.Stat(path)
+
+	// create file if not exists
+	if os.IsNotExist(err) {
+		var file, err = os.Create(path)
+		checkError(err)
+		defer file.Close()
+	}
+}
+
 func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile string) {
 	prompt := account
 	if role != "" {
@@ -233,4 +263,23 @@ func sessionToEnvVars(awsCreds AwsCreds, account string, role string, profile st
 func startShell(account string) {
 	fmt.Println("Starting shell with Session in: " + account)
 	syscall.Exec(os.Getenv("SHELL"), []string{os.Getenv("SHELL")}, syscall.Environ())
+}
+
+func Round(d, r time.Duration) time.Duration {
+	if r <= 0 {
+		return d
+	}
+	neg := d < 0
+	if neg {
+		d = -d
+	}
+	if m := d % r; m+m < r {
+		d = d - m
+	} else {
+		d = d + r - m
+	}
+	if neg {
+		return -d
+	}
+	return d
 }
