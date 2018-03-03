@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/user"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -141,6 +143,37 @@ func GetNewSession(profile string, accountId string, userName string, tokenCode 
 	return
 }
 
+func GetNewRoleSession(accountId string, roleName string, externalId string, usr user.User) (awsCreds AwsCreds) {
+	sess, err := session.NewSession(&aws.Config{Region: aws.String("us-east-1")})
+	CheckError(err)
+	svc := sts.New(sess)
+
+	timestamp := int64(time.Now().Unix())
+	if externalId == "" {
+		externalId = usr.Username
+	}
+
+	params := &sts.AssumeRoleInput{
+		ExternalId:      aws.String(externalId),
+		DurationSeconds: aws.Int64(3600),
+		RoleArn:         aws.String("arn:aws:iam::" + accountId + ":role/" + roleName),
+		RoleSessionName: aws.String("Portray-" + usr.Username + "-" + strconv.FormatInt(timestamp, 10)),
+	}
+
+	resp, err := svc.AssumeRole(params)
+	CheckError(err)
+
+	awsCreds = AwsCreds{
+		*resp.Credentials.AccessKeyId,
+		*resp.Credentials.SecretAccessKey,
+		*resp.Credentials.SessionToken,
+		resp.Credentials.Expiration.Unix(),
+		accountId,
+	}
+
+	return
+}
+
 func SessionToEnvVars(awsCreds AwsCreds, account string, role string, profile string) {
 	prompt := account
 	if role != "" {
@@ -155,7 +188,6 @@ func SessionToEnvVars(awsCreds AwsCreds, account string, role string, profile st
 	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
 	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)
 	os.Setenv("PORTRAY_PROMPT", prompt)
-
 }
 
 func StartShell(sessionName string) {

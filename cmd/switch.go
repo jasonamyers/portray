@@ -22,7 +22,12 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"strings"
+	"time"
 
+	"github.com/jasonamyers/portray/util"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -48,7 +53,7 @@ or by passing in the account and role details directly.`,
 
 		if roleProfile != "" {
 			if viper.IsSet("Profiles." + roleProfile) {
-				//profileKey := "Profiles." + roleProfile + "."
+				profileKey := "Profiles." + roleProfile + "."
 				fmt.Printf("Found profile %s in config\n", roleProfile)
 
 				if roleAccountId != "" {
@@ -62,11 +67,63 @@ or by passing in the account and role details directly.`,
 				}
 
 				// get role arn from profile
+				roleArn = viper.GetString(profileKey + "RoleArn")
+				if roleArn == "" {
+					fmt.Println("Error! Couldn't find RoleArn in profile config")
+					os.Exit(1)
+				}
+				// get role name from role arn
+				roleName = strings.Split(roleArn, "/")[1]
+				// get account id from role arn
+				roleAccountId = strings.Split(roleArn, ":")[4]
 				// get external id from profile
+				roleExternalId = viper.GetString(profileKey + "ExternalId")
+
 			} else {
 				fmt.Printf("Error! Unable to find profile %s in config. Is it set in the Profiles section?\n", roleProfile)
+				os.Exit(1)
+			}
+		} else { // user has not specified profile
+			// user has not specified account
+			if roleAccountId == "" || roleName == "" {
+				fmt.Println("Error! When not using named profiles, you must specify both the account and the role name")
+				os.Exit(1)
 			}
 		}
+
+		currentUser, err := user.Current()
+		util.CheckError(err)
+
+		home, err := homedir.Dir()
+		util.CheckError(err)
+		roleFileName := home + "/.aws/portray-role-session-" + roleAccountId + "_" + roleName + ".json"
+		awsCreds := util.GetCredsFromFile(roleFileName)
+
+		// If there's no valid session cache, generate a new session.
+		if awsCreds.SessionToken == "" || !util.ValidateSession(awsCreds) {
+			fmt.Printf("No session cache found or cache expired. Assuming role %s in account %s\n", roleName, roleAccountId)
+
+			awsCreds = util.GetNewRoleSession(
+				roleAccountId,
+				roleName,
+				roleExternalId,
+				*currentUser)
+
+			util.WriteSessionFile(awsCreds, roleFileName)
+		} else {
+			// Found a cached sessions that's still valid
+			fmt.Println("Using cached session credentials")
+
+			// Check how much time is left on the session so we can tell the user
+			sessionExpiration := time.Unix(awsCreds.Expiration, 0)
+			currentTime := time.Now()
+			sessionTimeLeft := sessionExpiration.Sub(currentTime)
+
+			fmt.Printf("Session valid for %+v\n", util.Round(sessionTimeLeft, time.Second))
+		}
+
+		util.SessionToEnvVars(awsCreds, roleAccountId, roleName, roleProfile)
+		util.StartShell(roleAccountId)
 	},
 }
 

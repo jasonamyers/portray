@@ -89,8 +89,7 @@ var authCmd = &cobra.Command{
 				fmt.Printf("Invalid profile %s! Is it configured in the AuthProfiles section?\n", profile)
 				os.Exit(1)
 			}
-			// user has not specified a profile
-		} else {
+		} else { // user has not specified a profile
 			// user has not specified account
 			// try to find default from config
 			if accountId == "" {
