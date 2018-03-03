@@ -29,9 +29,10 @@ import (
 )
 
 var cfgFile string
+var debug bool
 
-// RootCmd represents the base command when called without any subcommands
-var RootCmd = &cobra.Command{
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
 	Use:   "portray",
 	Short: "An AWS session and role management tool",
 	Long: `Portray helps manage STS sessions in multiple accounts by
@@ -41,7 +42,7 @@ isolating temporary credentials into subshells.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := RootCmd.Execute(); err != nil {
+	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -50,7 +51,11 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.portray.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.portray.yaml)")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode for verbose output")
+
+	viper.BindPFlag("config", rootCmd.Flags().Lookup("config"))
+	viper.BindPFlag("debug", rootCmd.Flags().Lookup("debug"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -77,6 +82,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		//fmt.Println("Using config file:", viper.ConfigFileUsed())
+        //log.Debug().Msg("Found config file %s", viper.ConfigFileUsed()))
 	}
 }

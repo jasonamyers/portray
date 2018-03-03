@@ -134,7 +134,7 @@ var authCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(authCmd)
+	rootCmd.AddCommand(authCmd)
 
 	authCmd.Flags().StringVarP(&accountId, "account", "a", "", "the AWS account number")
 	authCmd.Flags().StringVarP(&userName, "username", "u", "", "the AWS user name")

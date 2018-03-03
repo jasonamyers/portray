@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/ghodss/yaml"
@@ -44,7 +43,7 @@ type PortrayConfig struct {
 
 type AwsAuthProfile struct {
 	Name      string `json:name`
-	AccountId int    `json:account_id`
+	AccountId string `json:account_id`
 	UserName  string `json:user_name`
 	Region    string `json:region`
 	Output    string `json:output`
@@ -79,7 +78,7 @@ as well as sync it with the AWS CLI config`,
 }
 
 func init() {
-	RootCmd.AddCommand(configCmd)
+	rootCmd.AddCommand(configCmd)
 
 	configCmd.Flags().BoolP("sync", "s", false, "sync Portray config with AWS CLI")
 	configCmd.Flags().StringVarP(&outFile, "out-file", "o", "", "The file to save the config to")
@@ -174,8 +173,7 @@ func parseAwsConfig() {
 					// profile and copy it back into the awsAuthProfiles map.
 					var tmp = v
 					tmp.UserName = userName
-					tmp.AccountId, err = strconv.Atoi(accountId)
-					check(err)
+					tmp.AccountId = accountId
 					awsAuthProfiles[profileName] = tmp
 				}
 			}

@@ -40,7 +40,7 @@ or by passing in the account and role details directly.`,
 }
 
 func init() {
-	RootCmd.AddCommand(switchCmd)
+	rootCmd.AddCommand(switchCmd)
 
 	switchCmd.Flags().StringVarP(&accountId, "account", "a", "", "the AWS account number")
 	switchCmd.Flags().StringVarP(&role, "role", "r", "", "the AWS role to assume")
