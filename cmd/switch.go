@@ -21,30 +21,65 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
-var role string
-var profileName string
+var roleAccountId string
+var roleArn string
+var roleName string
+var roleExternalId string
+var roleProfile string
 
 // switchCmd represents the switch command
 var switchCmd = &cobra.Command{
 	Use:   "switch",
-	Short: "assumes an AWS role",
+	Short: "Assumes an AWS role",
 	Long: `The switch command allows you to assume a role via a named profile
 or by passing in the account and role details directly.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("switch called")
+		if roleProfile == "" && (roleAccountId == "" || roleName == "") {
+			fmt.Println("Error! Use either a named profile or manually specify both account and role")
+			fmt.Println("See portray switch -h for options")
+			os.Exit(1)
+		}
+
+		if roleProfile != "" {
+			if viper.IsSet("Profiles." + roleProfile) {
+				//profileKey := "Profiles." + roleProfile + "."
+				fmt.Printf("Found profile %s in config\n", roleProfile)
+
+				if roleAccountId != "" {
+					fmt.Println("Error! Can't specify alternate account for a configured profile")
+					os.Exit(1)
+				}
+
+				if roleName != "" {
+					fmt.Println("Error! Can't specify alternate role name for a configured profile")
+					os.Exit(1)
+				}
+
+				// get role arn from profile
+				// get external id from profile
+			} else {
+				fmt.Printf("Error! Unable to find profile %s in config. Is it set in the Profiles section?\n", roleProfile)
+			}
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(switchCmd)
 
-	switchCmd.Flags().StringVarP(&accountId, "account", "a", "", "the AWS account number")
-	switchCmd.Flags().StringVarP(&role, "role", "r", "", "the AWS role to assume")
-	switchCmd.Flags().StringVarP(&profileName, "profile", "p", "", "the name to save these details under")
-	switchCmd.Flags().StringVarP(&userName, "username", "u", "", "the AWS user name")
-	switchCmd.Flags().BoolP("save", "s", false, "save the account details")
+	switchCmd.Flags().StringVarP(&roleAccountId, "account", "a", "", "the 12-digit AWS account ID")
+	switchCmd.Flags().StringVarP(&roleName, "role", "r", "", "the name of the role to assume")
+	switchCmd.Flags().StringVarP(&roleExternalId, "external-id", "e", "", "the ExternalId required to assume the role")
+	switchCmd.Flags().StringVarP(&roleProfile, "profile", "p", "", "the named profile to use (conflicts w/ others)")
+
+	viper.BindPFlag("AccountId", switchCmd.Flags().Lookup("account"))
+	viper.BindPFlag("Role", switchCmd.Flags().Lookup("role"))
+	viper.BindPFlag("ExternalId", switchCmd.Flags().Lookup("external-id"))
+	viper.BindPFlag("Profile", switchCmd.Flags().Lookup("profile"))
 }
