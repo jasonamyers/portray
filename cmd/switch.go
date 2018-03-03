@@ -54,7 +54,6 @@ or by passing in the account and role details directly.`,
 		if roleProfile != "" {
 			if viper.IsSet("Profiles." + roleProfile) {
 				profileKey := "Profiles." + roleProfile + "."
-				fmt.Printf("Found profile %s in config\n", roleProfile)
 
 				if roleAccountId != "" {
 					fmt.Println("Error! Can't specify alternate account for a configured profile")
@@ -65,6 +64,8 @@ or by passing in the account and role details directly.`,
 					fmt.Println("Error! Can't specify alternate role name for a configured profile")
 					os.Exit(1)
 				}
+
+				fmt.Printf("Found profile %s in config\n", roleProfile)
 
 				// get role arn from profile
 				roleArn = viper.GetString(profileKey + "RoleArn")
