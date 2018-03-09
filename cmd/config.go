@@ -101,8 +101,7 @@ func parseAwsConfig() {
 		os.Exit(1)
 	}
 
-	// ini parsing has a DEFAULT section that's empty. Let's not count it.
-	numProfiles := len(cfg.SectionStrings()) - 1
+	numProfiles := len(cfg.SectionStrings())
 	//fmt.Printf("Found %d profiles in AWS config\n", numProfiles)
 
 	portrayConfig := PortrayConfig{}
