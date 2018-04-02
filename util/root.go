@@ -186,6 +186,7 @@ func SessionToEnvVars(awsCreds AwsCreds, account string, role string, profile st
 	fmt.Println("Setting ENV VARS")
 	os.Setenv("AWS_ACCESS_KEY_ID", awsCreds.AccessKeyID)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", awsCreds.SecretAccessKey)
+	os.Setenv("AWS_SECURITY_TOKEN", awsCreds.SessionToken)
 	os.Setenv("AWS_SESSION_TOKEN", awsCreds.SessionToken)
 	os.Setenv("PORTRAY_PROMPT", prompt)
 }
