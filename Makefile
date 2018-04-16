@@ -1,7 +1,10 @@
 # Makefile to help with building portray
 #
 BUILD_VERSION:=$(shell git describe --tags)
-LDFLAGS=-ldflags "-X main.version=${BUILD_VERSION}"
+GIT_COMMIT := $(shell git rev-parse HEAD)
+BUILD_TIME := $(shell TZ=utc date)
+GO_VERSION := $(shell go version | sed 's/go version //')
+LDFLAGS=-ldflags "-X main.Version=${BUILD_VERSION} -X main.GitCommit=${GIT_COMMIT} -X \"main.BuildTime=${BUILD_TIME}\" -X \"main.GoVersion=${GO_VERSION}\""
 
 # Colors
 NOCOLOR=\033[0m
@@ -21,16 +24,16 @@ clean:
 build:
 	go get
 	@echo "Building portray for your current environment"
-	@go build && echo "${GREEN}Success!${NOCOLOR}" || echo "${RED}Build failed!${NOCOLOR}";
+	go build ${LDFLAGS} && echo "${GREEN}Success!${NOCOLOR}" || echo "${RED}Build failed!${NOCOLOR}";
 
 build_multi:
 	go get
 	@echo "Building portray for Linux amd64"
-	GOOS=linux GOARCH=amd64 go build -o portray-linux-amd64 main.go
+	GOOS=linux GOARCH=amd64 go build ${LDFLAGS} -o portray-linux-amd64 main.go
 	@echo "Building portray for Mac OS X amd64"
-	GOOS=darwin GOARCH=amd64 go build -o portray-mac-amd64 main.go
+	GOOS=darwin GOARCH=amd64 go build ${LDFLAGS} -o portray-mac-amd64 main.go
 	@echo "Building portray for Windows amd64"
-	GOOS=windows GOARCH=amd64 go build -o portray-windows-amd64 main.go
+	GOOS=windows GOARCH=amd64 go build ${LDFLAGS} -o portray-windows-amd64 main.go
 
 debug_in_tmux_pane:
 	@echo "Launching delve debugger in bottom-right tmux pane"

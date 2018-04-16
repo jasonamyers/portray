@@ -31,6 +31,14 @@ import (
 var cfgFile string
 var debug bool
 
+// compile time build info
+var (
+	Version   string
+	GitCommit string
+	BuildTime string
+	GoVersion string
+)
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "portray",
