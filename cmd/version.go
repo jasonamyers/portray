@@ -17,24 +17,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-package main
+package cmd
 
-import "github.com/jasonamyers/portray/cmd"
+import (
+	"fmt"
 
-// compile time build info
-var (
-	Version   string
-	GitCommit string
-	BuildTime string
-	GoVersion string
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	// Set built-time vars in the cmd package so we can access them in commands
-	cmd.Version = Version
-	cmd.GitCommit = GitCommit
-	cmd.BuildTime = BuildTime
-	cmd.GoVersion = GoVersion
+// configCmd represents the sync command
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "display Portray version info",
+	Long: `The version command allows you to view information about the current
+Portray version`,
+	Run: func(cmd *cobra.Command, args []string) {
 
-	cmd.Execute()
+		// Print the version info
+		versionInfo := fmt.Sprintf(`Portray build info:
+
+  Version:	%s
+  Git Commit:	%s
+  Build Time:	%s
+  Go Version:	%s
+
+`, Version, GitCommit, BuildTime, GoVersion)
+
+		fmt.Print(versionInfo)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
 }
