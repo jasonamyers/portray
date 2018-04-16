@@ -65,8 +65,6 @@ var configCmd = &cobra.Command{
 	Long: `The config command allows you to view the current Portray config,
 as well as sync it with the AWS CLI config`,
 	Run: func(cmd *cobra.Command, args []string) {
-		err := viper.ReadInConfig() // Find and read the config file
-		check(err)
 
 		if viper.GetBool("sync") {
 			//fmt.Println("Attempting to parse ~/.aws/config")
