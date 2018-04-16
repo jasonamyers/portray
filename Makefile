@@ -1,5 +1,7 @@
 # Makefile to help with building portray
 #
+BUILD_VERSION:=$(shell git describe --tags)
+LDFLAGS=-ldflags "-X main.version=${BUILD_VERSION}"
 
 # Colors
 NOCOLOR=\033[0m

@@ -21,6 +21,11 @@ package main
 
 import "github.com/jasonamyers/portray/cmd"
 
+var (
+    // compile time version string
+    version string
+)
+
 func main() {
 	cmd.Execute()
 }
