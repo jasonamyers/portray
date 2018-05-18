@@ -9,6 +9,12 @@ start using Portray. You can learn more in the [AWS CLI Config Guide](http://doc
 Portray can parse the AWS CLI config and expects it to be located at
 `~/.aws/config`. See the [Config](#config) section for more info.
 
+## Installation
+
+To install Portray, download the latest binary for your platform from the
+[releases page](https://github.com/jasonamyers/portray/releases) and place it
+on your PATH.
+
 ## Authenticating
 
 Authenticating with portray is done via the auth subcommand. It requires an AWS
@@ -142,6 +148,16 @@ After a switch
 ``234567890123:Admin:dev [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
 
 ## Developing
+
+To develop Portray, you'll need Golang 1.10+ installed on your
+machine to fetch and compile the sources.
+
+```shell
+go get -d github.com/jasonamyers/portray
+make build
+```
+
+### Dependency Managedment
 
 `dep` is used for package management. Use `dep ensure` to keep Gopkg.lock and
 vendored packages in sync.
