@@ -1,5 +1,7 @@
 # Portray
 
+[![CircleCI](https://circleci.com/gh/jasonamyers/portray.svg?style=svg)](https://circleci.com/gh/jasonamyers/portray)
+
 Portray is meant to allow you to portray yourself as another user on AWS. This
 is useful if you have AWS credentials that you use to assume roles,
 particularly if role assumption requires a valid MFA session.
@@ -73,7 +75,7 @@ The command below is an example of how to assume a role:
 
 Here is an example of using a saved role from configuration in the switch
 
-``./portray switch --profile dev``
+`./portray switch --profile dev`
 
 Starting sessions from config uses the named Profiles.
 
@@ -141,11 +143,11 @@ role name, and profile so you can add that to your prompt.
 
 For example after an auth:
 
-``123456789012:ctl [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
+`123456789012:ctl [jasonamyers:~/dev/portray] master(+92/-12)* ± exit`
 
 After a switch
 
-``234567890123:Admin:dev [jasonamyers:~/dev/portray] master(+92/-12)* ± exit``
+`234567890123:Admin:dev [jasonamyers:~/dev/portray] master(+92/-12)* ± exit`
 
 ## Developing
 
