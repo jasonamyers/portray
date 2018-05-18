@@ -1,6 +1,6 @@
 # Portray
 
-[![CircleCI](https://circleci.com/gh/jasonamyers/portray.svg?style=svg)](https://circleci.com/gh/jasonamyers/portray)
+[![CircleCI](https://circleci.com/gh/jasonamyers/portray.svg?style=shield)](https://circleci.com/gh/jasonamyers/portray)
 
 Portray is meant to allow you to portray yourself as another user on AWS. This
 is useful if you have AWS credentials that you use to assume roles,
