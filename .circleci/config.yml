@@ -29,12 +29,12 @@ jobs:
         # specify the version
         - image: circleci/golang:1.9
     working_directory: /go/src/github.com/jasonamyers/portray
-      steps:
-        - checkout
-        - run: go get github.com/mitchellh/gox
-        - run: go get github.com/tcnksm/ghr
-        - run: gox -ldflags "-X main.Version $BUILD_VERSION -X main.BuildDate $BUILD_DATE" -output "dist/ncd_{{.OS}}_{{.Arch}}"
-        - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` dist/
+    steps:
+      - checkout
+      - run: go get github.com/mitchellh/gox
+      - run: go get github.com/tcnksm/ghr
+      - run: gox -ldflags "-X main.Version $BUILD_VERSION -X main.BuildDate $BUILD_DATE" -output "dist/ncd_{{.OS}}_{{.Arch}}"
+      - run: ghr -t $GITHUB_TOKEN -u $CIRCLE_PROJECT_USERNAME -r $CIRCLE_PROJECT_REPONAME --replace `git describe --tags` dist/
 workflows:
   version: 2
   build-n-release:
